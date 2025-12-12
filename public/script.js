@@ -3,7 +3,7 @@
 const API_JIKAN = "https://api.jikan.moe/v4";
 const API_TVMAZE = "https://api.tvmaze.com";
 // MAKE SURE THIS MATCHES YOUR SERVER PORT
-const API_NODE = "http://localhost:5000"; 
+const API_NODE = "https://my-screen-time.vercel.app/"; 
 
 const EXCLUDED_GENRES = ["Ecchi", "Hentai", "Erotica", "Harem", "Yaoi", "Yuri", "Gore", "Boys Love", "Girls Love"];
 const STATUS_OPTIONS_UI = ["Want to Watch", "Watching", "Completed", "Paused", "Dropped"];
@@ -227,3 +227,4 @@ function escapeHtml(str) { return String(str || "").replace(/[&<>"']/g, s => ({ 
 function closeDropdown(el){ el.blur(); }
 function openNav() { document.getElementById("mySidenav").style.width = "250px"; }
 function closeNav() { document.getElementById("mySidenav").style.width = "0"; }
+
