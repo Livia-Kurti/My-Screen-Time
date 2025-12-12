@@ -1,11 +1,18 @@
+// script.js
+
 const API_JIKAN = "https://api.jikan.moe/v4";
 const API_TVMAZE = "https://api.tvmaze.com";
 // CHANGE THIS TO YOUR ACTUAL BACKEND URL IF DEPLOYED
 const API_NODE = "https://my-screen-time.vercel.app"; 
 
-const EXCLUDED_GENRES = ["Ecchi", "Hentai", "Erotica", "Harem", "Yaoi", "Yuri", "Gore", "Boys Love", "Girls Love", "CGDCT", "Adult Cast", "Crossdressing", "High Stakes Game", 
-                         "Avant Garde", "Suspense", "Combat Sports", "Delinquents", "Idols (Female)", "Idols (Male)", "Love Polygon", "Magical Sex Shift", "Martial Arts", "Military","Organized Crime",
-                         "Psychological", "Reverse Harem", "Survival"];
+// --- SAFETY FILTERS ---
+// 1. ANIME: Jikan will exclude these
+const EXCLUDED_ANIME_GENRES = ["Ecchi", "Hentai", "Erotica", "Harem", "Yaoi", "Yuri", "Gore", "Boys Love", "Girls Love", "CGDCT", "Adult Cast", "Crossdressing", "High Stakes Game", "Avant Garde", "Suspense", "Combat Sports", 
+                               "Delinquents", "Idols (Female)", "Idols (Male)", "Love Polygon", "Magical Sex Shift", "Martial Arts", "Military","Organized Crime", "Psychological", "Reverse Harem", "Survival", "Horror"];
+
+// 2. TV/CARTOON: We will manually hide these from TVMaze
+const EXCLUDED_TV_GENRES = ["Horror", "Thriller", "Crime", "Supernatural", "Adult"];
+
 const STATUS_OPTIONS_UI = ["Want to Watch", "Watching", "Completed", "Paused", "Dropped"];
 
 // Store IDs of shows we already saved
@@ -23,13 +30,18 @@ document.addEventListener("DOMContentLoaded", () => {
 async function initGenerator(){
     const sourceSelect = document.getElementById("sourceSelect");
     
-    // 1. Fetch the user's saved list FIRST so we know what to hide
+    // 1. Fetch saved list so we don't show duplicates
     await fetchSavedIds();
 
-    loadGenres(); 
+    // 2. Load the correct genres for the default selection
+    handleSourceChange(); 
     fetchContent();
 
-    if(sourceSelect) sourceSelect.addEventListener("change", handleSourceChange);
+    if(sourceSelect) sourceSelect.addEventListener("change", () => {
+        handleSourceChange();
+        // Optional: Auto-fetch when category changes
+        // fetchContent(); 
+    });
 }
 
 // Fetch all saved IDs from the database
@@ -54,31 +66,41 @@ function handleSourceChange() {
     const source = document.getElementById("sourceSelect").value;
     const genreSelect = document.getElementById("genreSelect");
     
+    // Reset Grid
     document.getElementById("animeGrid").innerHTML = '<div style="color:#666; grid-column:1/-1;">Click Regenerate...</div>';
     
-    if(source === "tv") {
+    // Manually build genre lists because TVMaze doesn't have a good "list all genres" endpoint
+    if(source === "tv" || source === "cartoon") {
         genreSelect.innerHTML = `
-            <option value="">All TV Genres</option>
+            <option value="">All Genres</option>
             <option value="Action">Action</option>
+            <option value="Adventure">Adventure</option>
             <option value="Comedy">Comedy</option>
             <option value="Drama">Drama</option>
+            <option value="Family">Family</option>
+            <option value="Fantasy">Fantasy</option>
+            <option value="Mystery">Mystery</option>
+            <option value="Romance">Romance</option>
             <option value="Science-Fiction">Sci-Fi</option>
-            <option value="Thriller">Thriller</option>
-            <option value="Horror">Horror</option>
+            <option value="Sports">Sports</option>
         `;
     } else {
+        // For Anime, we load from API
         genreSelect.innerHTML = '<option value="">All Genres</option>';
-        loadGenres();
+        loadJikanGenres();
     }
 }
 
 // --- MAIN FETCH ---
 async function fetchContent() {
-    const source = document.getElementById("sourceSelect") ? document.getElementById("sourceSelect").value : "anime";
+    const source = document.getElementById("sourceSelect").value; // anime, tv, or cartoon
     await fetchSavedIds();
     
-    if (source === "tv") await fetchTVMaze();
-    else await fetchAnime();
+    if (source === "anime") {
+        await fetchAnime();
+    } else {
+        await fetchTVMaze(source); // Pass 'tv' or 'cartoon' to the function
+    }
 }
 
 async function fetchAnime() {
@@ -89,9 +111,13 @@ async function fetchAnime() {
     try {
         const url = new URL(`${API_JIKAN}/anime`);
         url.searchParams.append("order_by", "popularity");
+        
+        // --- THIS IS THE SAFETY LINE YOU ASKED ABOUT ---
         url.searchParams.append("sfw", "true"); 
-        url.searchParams.append("limit", "20"); 
+        
+        url.searchParams.append("limit", "24"); 
         url.searchParams.append("page", Math.floor(Math.random() * 3) + 1);
+        
         if (genreId) url.searchParams.append("genres", genreId);
         
         const res = await fetch(url);
@@ -99,7 +125,13 @@ async function fetchAnime() {
         
         const normalized = data.data
             .map(item => normalizeData(item, 'anime'))
-            .filter(item => !SAVED_IDS.has(item.id)); 
+            // Filter duplicates AND excluded genres just in case
+            .filter(item => !SAVED_IDS.has(item.id))
+            .filter(item => {
+                // Double check genres for safety
+                const hasBadGenre = item.genres.some(g => EXCLUDED_ANIME_GENRES.includes(g));
+                return !hasBadGenre;
+            });
 
         renderGrid(normalized.slice(0, 12)); 
     } catch (error) {
@@ -108,27 +140,49 @@ async function fetchAnime() {
     }
 }
 
-async function fetchTVMaze() {
+async function fetchTVMaze(type) {
     const grid = document.getElementById("animeGrid");
     const genreText = document.getElementById("genreSelect").value;
-    grid.innerHTML = '<div style="color:white; grid-column:1/-1; text-align:center;">Finding Western TV shows...</div>';
+    
+    const label = type === 'cartoon' ? "Cartoons" : "Live Action TV";
+    grid.innerHTML = `<div style="color:white; grid-column:1/-1; text-align:center;">Finding ${label}...</div>`;
 
     try {
-        let endpoint = `${API_TVMAZE}/shows`; 
-        if (genreText) endpoint = `${API_TVMAZE}/search/shows?q=${genreText}`;
-
+        // TVMaze search is tricky. If we have a genre, we fetch shows and filter manually.
+        let endpoint = `${API_TVMAZE}/shows?page=${Math.floor(Math.random() * 5)}`; 
+        
         const res = await fetch(endpoint);
         let data = await res.json();
-        let shows = genreText ? data.map(item => item.show) : data;
         
-        const westernShows = shows.filter(show => show.language !== 'Japanese');
-        
-        const normalized = westernShows
+        // 1. Filter by TYPE (Animation vs Scripted/Reality)
+        let filtered = data.filter(item => {
+            const isAnimation = item.type === 'Animation' || item.genres.includes('Anime');
+            if (type === 'cartoon') return isAnimation;
+            if (type === 'tv') return !isAnimation; // Return only Live Action
+            return true;
+        });
+
+        // 2. Filter by GENRE (User Selection)
+        if (genreText) {
+            filtered = filtered.filter(item => item.genres.includes(genreText));
+        }
+
+        // 3. Filter by SAFETY (Exclude Horror, Thriller)
+        filtered = filtered.filter(item => {
+            const hasBadGenre = item.genres.some(g => EXCLUDED_TV_GENRES.includes(g));
+            return !hasBadGenre;
+        });
+
+        // 4. Normalize and Hide Saved
+        const normalized = filtered
             .map(item => normalizeData(item, 'tv'))
             .filter(item => !SAVED_IDS.has(item.id)); 
         
-        if (normalized.length === 0) grid.innerHTML = '<p style="color:white">No new shows found.</p>';
-        else renderGrid(normalized.slice(0, 12));
+        if (normalized.length === 0) {
+            grid.innerHTML = '<p style="color:white; grid-column:1/-1; text-align:center">No shows found. Try a different genre!</p>';
+        } else {
+            renderGrid(normalized.slice(0, 12));
+        }
     } catch (error) {
         console.error(error);
         grid.innerHTML = '<p style="color:red">Error loading TV Shows.</p>';
@@ -263,8 +317,6 @@ function renderMyList(items) {
             return `<option value="${s}" ${isSelected}>${s}</option>`;
         }).join('');
 
-        // 1. ADDED REMOVE BUTTON (RED)
-        // 2. FIXED onclick to pass ID correctly
         card.innerHTML = `
             <img src="${item.image}" alt="${safeTitle}">
             <div class="card-overlay">
@@ -301,22 +353,16 @@ async function updateStatus(dbId, newStatusUI) {
 }
 
 async function deleteEntry(dbId, cardElement) {
-    // 1. CONFIRMATION
     if(!confirm("Are you sure you want to remove this from your list?")) return;
-    
     try {
-        // 2. SEND DELETE REQUEST
         const res = await fetch(`${API_NODE}/api/anime/${dbId}`, { method: "DELETE" });
-        
         if (res.ok) {
-            // 3. REMOVE FROM UI
             cardElement.remove();
             showToast("Entry removed");
         } else {
             showToast("Delete failed");
         }
     } catch (e) { 
-        console.error(e);
         showToast("Delete failed"); 
     }
 }
@@ -334,13 +380,13 @@ function showToast(message) {
     setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
 }
 
-async function loadGenres() {
+async function loadJikanGenres() {
     const select = document.getElementById("genreSelect");
     if(!select) return;
     try {
         const res = await fetch(`${API_JIKAN}/genres/anime`);
         const data = await res.json();
-        const safe = data.data.filter(g => !EXCLUDED_GENRES.includes(g.name));
+        const safe = data.data.filter(g => !EXCLUDED_ANIME_GENRES.includes(g.name));
         safe.forEach(g => {
             const opt = document.createElement("option");
             opt.value = g.mal_id;
@@ -352,5 +398,3 @@ async function loadGenres() {
 
 function escapeHtml(str) { return String(str || "").replace(/[&<>"']/g, s => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[s]); }
 function closeDropdown(el){ el.blur(); }
-
-
