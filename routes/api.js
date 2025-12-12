@@ -1,110 +1,42 @@
-const express = require('express');
-const { PrismaClient, AnimeStatus } = require('@prisma/client');
+// routes/api.js (inside your router.post or app.post code)
 
-const router = express.Router();
-const prisma = new PrismaClient();
-const VALID_STATUSES = Object.keys(AnimeStatus);
-
-// ===============================================
-// READ: GET /api/anime/mylist
-// ===============================================
-router.get('/mylist', async (req, res) => {
-    const { status } = req.query; 
-    const filter = {};
-    
-    if (status && VALID_STATUSES.includes(status)) {
-        filter.status = status;
-    }
-
+router.post('/anime', async (req, res) => {
     try {
-        const list = await prisma.singleAnimeList.findMany({
-            where: filter,
-            orderBy: { updatedAt: 'desc' },
-        });
-        res.json(list);
-    } catch (error) {
-        console.error("Error fetching list:", error);
-        res.status(500).json({ msg: "Failed to load list." });
-    }
-});
+        const { jikanId, tvmazeId, title, image, status } = req.body;
 
-// ===============================================
-// CREATE/UPDATE: POST /api/anime
-// ===============================================
-router.post('/', async (req, res) => {
-    const { jikanId, tvmazeId, title, image, status } = req.body;
+        // 1. Determine which ID we are using to search
+        // If we have a jikanId, look for that. If not, look for tvmazeId.
+        const whereClause = jikanId 
+            ? { jikanId: parseInt(jikanId) } 
+            : { tvmazeId: parseInt(tvmazeId) };
 
-    // Validate Status
-    if (!VALID_STATUSES.includes(status)) {
-        return res.status(400).json({ msg: "Invalid status." });
-    }
-
-    // Validate IDs
-    if (!jikanId && !tvmazeId) {
-        return res.status(400).json({ msg: "Missing Show ID (Jikan or TVMaze)." });
-    }
-
-    try {
-        let listEntry;
-
-        if (jikanId) {
-            // ANIME LOGIC
-            listEntry = await prisma.singleAnimeList.upsert({
-                where: { jikanId: parseInt(jikanId) }, 
-                update: { status: status, updatedAt: new Date() },
-                create: { jikanId: parseInt(jikanId), tvmazeId: null, title, image: image || '', status },
-            });
-        } else {
-            // TV SHOW LOGIC
-            listEntry = await prisma.singleAnimeList.upsert({
-                where: { tvmazeId: parseInt(tvmazeId) },
-                update: { status: status, updatedAt: new Date() },
-                create: { jikanId: null, tvmazeId: parseInt(tvmazeId), title, image: image || '', status },
-            });
+        if (!whereClause.jikanId && !whereClause.tvmazeId) {
+            return res.status(400).json({ msg: "No valid ID provided" });
         }
-        res.status(201).json({ msg: 'List updated.', entry: listEntry });
 
-    } catch (error) {
-        console.error("Error creating/updating list:", error);
-        res.status(500).json({ msg: 'Failed to process list entry.' });
-    }
-});
-
-// ===============================================
-// UPDATE STATUS: PUT /api/anime/:id
-// ===============================================
-router.put('/:id', async (req, res) => {
-    const { id } = req.params;
-    const { status } = req.body;
-
-    if (!id || !VALID_STATUSES.includes(status)) {
-        return res.status(400).json({ msg: "Invalid ID or status." });
-    }
-
-    try {
-        const updatedEntry = await prisma.singleAnimeList.update({
-            where: { id: id },
-            data: { status: status, updatedAt: new Date() },
+        // 2. Use UPSERT with the correct "where" clause
+        // This prevents the P2002 Unique Constraint error
+        const savedItem = await prisma.singleAnimeList.upsert({
+            where: whereClause,
+            update: {
+                status: status,
+                // Update image/title just in case they changed
+                image: image,
+                title: title, 
+            },
+            create: {
+                jikanId: jikanId ? parseInt(jikanId) : null,
+                tvmazeId: tvmazeId ? parseInt(tvmazeId) : null,
+                title: title,
+                image: image,
+                status: status
+            }
         });
-        res.json({ msg: 'List entry updated.', entry: updatedEntry });
+
+        res.json(savedItem);
+
     } catch (error) {
-        console.error("Error updating list entry:", error);
-        res.status(500).json({ msg: 'Failed to update list entry.' });
+        console.error("Save Error:", error);
+        res.status(500).json({ error: "Could not save item" });
     }
 });
-
-// ===============================================
-// DELETE: DELETE /api/anime/:id
-// ===============================================
-router.delete('/:id', async (req, res) => {
-    const { id } = req.params;
-    try {
-        await prisma.singleAnimeList.delete({ where: { id: id } });
-        res.status(204).send();
-    } catch (error) {
-        console.error("Error deleting list entry:", error);
-        res.status(500).json({ msg: 'Failed to delete list entry.' });
-    }
-});
-
-module.exports = router;
