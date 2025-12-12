@@ -3,7 +3,9 @@ const API_TVMAZE = "https://api.tvmaze.com";
 // CHANGE THIS TO YOUR ACTUAL BACKEND URL IF DEPLOYED
 const API_NODE = "https://my-screen-time.vercel.app"; 
 
-const EXCLUDED_GENRES = ["Ecchi", "Hentai", "Erotica", "Harem", "Yaoi", "Yuri", "Gore", "Boys Love", "Girls Love", "CGDCT", "Adult Cast", "Crossdressing", "High Stakes Game","Thriller", "Horror"];
+const EXCLUDED_GENRES = ["Ecchi", "Hentai", "Erotica", "Harem", "Yaoi", "Yuri", "Gore", "Boys Love", "Girls Love", "CGDCT", "Adult Cast", "Crossdressing", "High Stakes Game", 
+                         "Avant Garde", "Suspense", "Combat Sports", "Delinquents", "Idols (Female)", "Idols (Male)", "Love Polygon", "Magical Sex Shift", "Martial Arts", "Military","Organized Crime",
+                         "Psychological", "Reverse Harem", "Survival"];
 const STATUS_OPTIONS_UI = ["Want to Watch", "Watching", "Completed", "Paused", "Dropped"];
 
 // Store IDs of shows we already saved
@@ -350,4 +352,5 @@ async function loadGenres() {
 
 function escapeHtml(str) { return String(str || "").replace(/[&<>"']/g, s => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[s]); }
 function closeDropdown(el){ el.blur(); }
+
 
