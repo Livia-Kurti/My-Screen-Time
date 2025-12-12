@@ -12,7 +12,7 @@ const EXCLUDED_ANIME_GENRES = ["Ecchi", "Hentai", "Erotica", "Harem", "Yaoi", "Y
                                "Love Polygon", "Magical Sex Shift", "Martial Arts", "Military","Organized Crime", "Psychological", "Reverse Harem", "Survival", "Horror"];
 
 // 2. TV/CARTOON: We will manually hide these from TVMaze
-const EXCLUDED_TV_GENRES = ["Horror", "Thriller", "Crime", "Supernatural", "Adult"];
+const EXCLUDED_TV_GENRES = ["Horror", "Thriller", "Crime", "Supernatural", "Adult", "Anime"];
 
 const STATUS_OPTIONS_UI = ["Want to Watch", "Watching", "Completed", "Paused", "Dropped"];
 
@@ -399,3 +399,4 @@ async function loadJikanGenres() {
 
 function escapeHtml(str) { return String(str || "").replace(/[&<>"']/g, s => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[s]); }
 function closeDropdown(el){ el.blur(); }
+
