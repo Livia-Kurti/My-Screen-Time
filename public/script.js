@@ -400,3 +400,13 @@ async function loadJikanGenres() {
 function escapeHtml(str) { return String(str || "").replace(/[&<>"']/g, s => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[s]); }
 function closeDropdown(el){ el.blur(); }
 
+/* -------------------- SIDEBAR NAVIGATION -------------------- */
+function openNav() {
+    document.getElementById("mySidenav").style.width = "250px";
+}
+
+function closeNav() {
+    document.getElementById("mySidenav").style.width = "0";
+}
+
+
