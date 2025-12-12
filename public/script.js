@@ -12,7 +12,7 @@ const EXCLUDED_ANIME_GENRES = ["Ecchi", "Hentai", "Erotica", "Harem", "Yaoi", "Y
                                "Love Polygon", "Magical Sex Shift", "Martial Arts", "Military","Organized Crime", "Psychological", "Reverse Harem", "Survival", "Horror"];
 
 // 2. TV/CARTOON: We will manually hide these from TVMaze
-const EXCLUDED_TV_GENRES = ["Horror", "Thriller", "Crime", "Supernatural", "Adult", "Romance"];
+const EXCLUDED_TV_GENRES = ["Horror", "Thriller", "Crime", "Supernatural", "Adult"];
 
 const STATUS_OPTIONS_UI = ["Want to Watch", "Watching", "Completed", "Paused", "Dropped"];
 
@@ -40,6 +40,8 @@ async function initGenerator(){
 
     if(sourceSelect) sourceSelect.addEventListener("change", () => {
         handleSourceChange();
+        // Optional: Auto-fetch when category changes
+        // fetchContent(); 
     });
 }
 
@@ -79,6 +81,7 @@ function handleSourceChange() {
             <option value="Family">Family</option>
             <option value="Fantasy">Fantasy</option>
             <option value="Mystery">Mystery</option>
+            <option value="Romance">Romance</option>
             <option value="Science-Fiction">Sci-Fi</option>
             <option value="Sports">Sports</option>
         `;
@@ -110,9 +113,8 @@ async function fetchAnime() {
         const url = new URL(`${API_JIKAN}/anime`);
         url.searchParams.append("order_by", "popularity");
         
-        // --- SAFETY UPDATE 1: SFW + RATING ---
+        // --- THIS IS THE SAFETY LINE YOU ASKED ABOUT ---
         url.searchParams.append("sfw", "true"); 
-        url.searchParams.append("rating", "pg"); // Limit to 'G' (All Ages) or 'PG' (Children)
         
         url.searchParams.append("limit", "24"); 
         url.searchParams.append("page", Math.floor(Math.random() * 3) + 1);
@@ -124,8 +126,10 @@ async function fetchAnime() {
         
         const normalized = data.data
             .map(item => normalizeData(item, 'anime'))
+            // Filter duplicates AND excluded genres just in case
             .filter(item => !SAVED_IDS.has(item.id))
             .filter(item => {
+                // Double check genres for safety
                 const hasBadGenre = item.genres.some(g => EXCLUDED_ANIME_GENRES.includes(g));
                 return !hasBadGenre;
             });
@@ -142,10 +146,10 @@ async function fetchTVMaze(type) {
     const genreText = document.getElementById("genreSelect").value;
     
     const label = type === 'cartoon' ? "Cartoons" : "Live Action TV";
-    grid.innerHTML = `<div style="color:white; grid-column:1/-1; text-align:center;">Finding Family Friendly ${label}...</div>`;
+    grid.innerHTML = `<div style="color:white; grid-column:1/-1; text-align:center;">Finding ${label}...</div>`;
 
     try {
-        // TVMaze search
+        // TVMaze search is tricky. If we have a genre, we fetch shows and filter manually.
         let endpoint = `${API_TVMAZE}/shows?page=${Math.floor(Math.random() * 5)}`; 
         
         const res = await fetch(endpoint);
@@ -155,7 +159,7 @@ async function fetchTVMaze(type) {
         let filtered = data.filter(item => {
             const isAnimation = item.type === 'Animation' || item.genres.includes('Anime');
             if (type === 'cartoon') return isAnimation;
-            if (type === 'tv') return !isAnimation; 
+            if (type === 'tv') return !isAnimation; // Return only Live Action
             return true;
         });
 
@@ -164,21 +168,19 @@ async function fetchTVMaze(type) {
             filtered = filtered.filter(item => item.genres.includes(genreText));
         }
 
-        // --- SAFETY UPDATE 2: STRICT WHITELIST ---
-        // For a show to appear, it MUST contain "Children" or "Family" genre.
-        // This is the only way to block "Adult Cartoons" reliably.
+        // 3. Filter by SAFETY (Exclude Horror, Thriller)
         filtered = filtered.filter(item => {
-            const isFamilyFriendly = item.genres.includes("Children") || item.genres.includes("Family");
-            return isFamilyFriendly;
+            const hasBadGenre = item.genres.some(g => EXCLUDED_TV_GENRES.includes(g));
+            return !hasBadGenre;
         });
 
-        // 3. Normalize and Hide Saved
+        // 4. Normalize and Hide Saved
         const normalized = filtered
             .map(item => normalizeData(item, 'tv'))
             .filter(item => !SAVED_IDS.has(item.id)); 
         
         if (normalized.length === 0) {
-            grid.innerHTML = '<p style="color:white; grid-column:1/-1; text-align:center">No family-friendly shows found. Try a different genre!</p>';
+            grid.innerHTML = '<p style="color:white; grid-column:1/-1; text-align:center">No shows found. Try a different genre!</p>';
         } else {
             renderGrid(normalized.slice(0, 12));
         }
