@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// Enum helps keep data clean
+enum AnimeStatus {
+  WANT_TO_WATCH
+  NOT_INTERESTED
+  WATCHING
+  COMPLETED 
+  PAUSED
+  DROPPED
+}
+
+model SingleAnimeList {
+  // This maps the ID to the MongoDB _id
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  
+  // Optional Unique IDs to prevent overlaps
+  jikanId   Int?     @unique 
+  tvmazeId  Int?     @unique 
+  
+  title     String
+  image     String
+  
+  // Uses the Enum above
+  status    AnimeStatus @default(WANT_TO_WATCH) 
+  
+  updatedAt DateTime @updatedAt
+}

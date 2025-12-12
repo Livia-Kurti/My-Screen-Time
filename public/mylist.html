@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My List - My Screen Time</title>
+    <link href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="top-bar">
+        <button class="menu-btn" onclick="openNav()">☰</button>
+    </div>
+
+    <div id="mySidenav" class="sidebar">
+        <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&times;</a>
+        <div class="brand">TV Show Tracker</div>
+        <a href="index.html" class="nav-item">Home</a>
+        <a href="gen.html" class="nav-item">Gen</a>
+        <a href="mylist.html" class="nav-item active">My List</a>
+    </div>
+
+    <div class="gen-container">
+        
+        <h2 style="color: #AC46FF; font-size: 2rem;">My Watch List</h2>
+        <p style="color: #A1A1AA; margin-top: 10px;">Track your progress. Filter by what you are watching now!</p>
+
+        <div class="controls-row">
+            <select id="statusFilter" style="border: 1px solid #8B5CF6; min-width: 200px;">
+                <option value="">Loading filters...</option>
+            </select>
+        </div>
+
+        <div class="grid" id="mylistGrid">
+            <div style="color: #666; grid-column: 1/-1;">Loading your list...</div>
+        </div>
+
+    </div>
+
+    <div id="toast"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - My Screen Time</title>
+    <link href="https://fonts.googleapis.com/css2?family=Arimo:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <button class="menu-btn" onclick="openNav()">☰</button>
+
+    <div id="mySidenav" class="sidebar">
+        <a href="javascript:void(0)" class="closebtn" onclick="closeNav()">&times;</a>
+        <div class="brand">TV Show Tracker</div>
+        <a href="index.html" class="nav-item active">Home</a>
+        <a href="gen.html" class="nav-item">Gen</a>
+        <a href="mylist.html" class="nav-item">My List</a>
+    </div>
+
+    <div class="home-container">
+        
+        <div class="tv-frame">
+            <div class="tv-antenna left"></div>
+            <div class="tv-antenna right"></div>
+            
+            <div class="tv-screen">
+                <a href="gen.html" class="start-btn">Let's Begin Your Journey</a>
+            </div>
+            
+            <div style="position: absolute; bottom: 20px; display: flex; gap: 10px;">
+                <span style="width: 6px; height: 6px; background: #8B5CF6; opacity: 0.3; border-radius: 50%;"></span>
+                <span style="width: 6px; height: 6px; background: #8B5CF6; opacity: 0.3; border-radius: 50%;"></span>
+                <span style="width: 6px; height: 6px; background: #8B5CF6; opacity: 0.3; border-radius: 50%;"></span>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <h1 class="home-title">Welcome to Your Screen Time</h1>
+            <p class="home-desc">
+                Looking for something safe to watch?<br>
+                We curate the best beginner-friendly series for you and your family.<br>
+                Hit start to find your next favorite show.
+            </p>
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
