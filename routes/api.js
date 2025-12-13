@@ -14,53 +14,39 @@ router.get('/mylist', async (req, res) => {
     }
 });
 
-// 2. POST: Save or Update (The Fix)
+// 2. POST: Save or Update
 router.post('/', async (req, res) => {
     try {
         const { jikanId, tvmazeId, title, image, status } = req.body;
 
-        // STEP A: Check if item exists using findFirst (Safe for non-unique fields)
+        // CHECK IF EXISTS
         let existingItem = null;
-
         if (jikanId) {
-            existingItem = await prisma.singleAnimeList.findFirst({
-                where: { jikanId: parseInt(jikanId) }
-            });
+            existingItem = await prisma.singleAnimeList.findFirst({ where: { jikanId: parseInt(jikanId) } });
         } else if (tvmazeId) {
-            existingItem = await prisma.singleAnimeList.findFirst({
-                where: { tvmazeId: parseInt(tvmazeId) }
-            });
+            existingItem = await prisma.singleAnimeList.findFirst({ where: { tvmazeId: parseInt(tvmazeId) } });
         }
 
+        // UPDATE OR CREATE
         let result;
-
-        // STEP B: Update if found
         if (existingItem) {
-            console.log("Item found. Updating...", existingItem.id);
             result = await prisma.singleAnimeList.update({
                 where: { id: existingItem.id },
                 data: { status, title, image }
             });
-        } 
-        // STEP C: Create if new
-        else {
-            console.log("Item not found. Creating...");
+        } else {
             result = await prisma.singleAnimeList.create({
                 data: {
                     jikanId: jikanId ? parseInt(jikanId) : null,
                     tvmazeId: tvmazeId ? parseInt(tvmazeId) : null,
-                    title,
-                    image,
-                    status
+                    title, image, status
                 }
             });
         }
-
         res.json(result);
-
     } catch (error) {
         console.error("Save Error:", error);
-        res.status(500).json({ error: "Could not save item", details: error.message });
+        res.status(500).json({ error: "Could not save item" });
     }
 });
 
@@ -69,8 +55,9 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
     try {
+        // FIXED: Removed parseInt() because MongoDB IDs are Strings
         const updated = await prisma.singleAnimeList.update({
-            where: { id: parseInt(id) }, // Note: If your ID is a String in schema, remove parseInt here!
+            where: { id: id }, 
             data: { status }
         });
         res.json(updated);
@@ -83,11 +70,13 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
     const { id } = req.params;
     try {
+        // FIXED: Removed parseInt() here too
         await prisma.singleAnimeList.delete({
-            where: { id: parseInt(id) } // Note: If your ID is a String in schema, remove parseInt here!
+            where: { id: id } 
         });
         res.json({ message: "Deleted" });
     } catch (error) {
+        console.error("Delete Error:", error);
         res.status(500).json({ error: "Failed to delete" });
     }
 });
