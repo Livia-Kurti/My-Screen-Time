@@ -1,7 +1,7 @@
-// routes/api.js - COMPLETE FILE
+// routes/api.js - FIXED (Manual Check instead of Upsert)
 
 const express = require('express');
-const router = express.Router(); // <--- This was missing before!
+const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
@@ -21,38 +21,55 @@ router.post('/', async (req, res) => {
     try {
         const { jikanId, tvmazeId, title, image, status } = req.body;
 
-        // LOGIC FIX: Strictly decide which ID to use for the "Unique" check
-        let upsertWhere;
-        
+        console.log("Processing item:", { title, jikanId, tvmazeId });
+
+        // STEP A: Check if this item already exists in the DB
+        let existingItem = null;
+
         if (jikanId) {
-            upsertWhere = { jikanId: parseInt(jikanId) };
+            existingItem = await prisma.singleAnimeList.findUnique({
+                where: { jikanId: parseInt(jikanId) }
+            });
         } else if (tvmazeId) {
-            upsertWhere = { tvmazeId: parseInt(tvmazeId) };
-        } else {
-            return res.status(400).json({ msg: "Error: No ID provided" });
+            existingItem = await prisma.singleAnimeList.findUnique({
+                where: { tvmazeId: parseInt(tvmazeId) }
+            });
         }
 
-        const savedItem = await prisma.singleAnimeList.upsert({
-            where: upsertWhere,
-            update: {
-                status: status,
-                image: image,
-                title: title, 
-            },
-            create: {
-                jikanId: jikanId ? parseInt(jikanId) : null,
-                tvmazeId: tvmazeId ? parseInt(tvmazeId) : null,
-                title: title,
-                image: image,
-                status: status
-            }
-        });
+        let result;
 
-        res.json(savedItem);
+        // STEP B: If found, UPDATE it using its internal database ID
+        if (existingItem) {
+            console.log("Item exists. Updating ID:", existingItem.id);
+            result = await prisma.singleAnimeList.update({
+                where: { id: existingItem.id },
+                data: {
+                    status: status,
+                    title: title,
+                    image: image
+                }
+            });
+        } 
+        // STEP C: If not found, CREATE a new one
+        else {
+            console.log("Item not found. Creating new entry.");
+            result = await prisma.singleAnimeList.create({
+                data: {
+                    jikanId: jikanId ? parseInt(jikanId) : null,
+                    tvmazeId: tvmazeId ? parseInt(tvmazeId) : null,
+                    title: title,
+                    image: image,
+                    status: status
+                }
+            });
+        }
+
+        res.json(result);
 
     } catch (error) {
         console.error("Save Error:", error);
-        res.status(500).json({ error: "Could not save item" });
+        // Return 500 but log the specific error so we can see it
+        res.status(500).json({ error: "Could not save item", details: error.message });
     }
 });
 
