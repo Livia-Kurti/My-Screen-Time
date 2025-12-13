@@ -1,3 +1,5 @@
+// schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -19,19 +21,12 @@ enum AnimeStatus {
 model SingleAnimeList {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   
-  // REMOVE @unique here. MongoDB cannot handle multiple nulls with @unique.
-  // We will handle uniqueness in our code (the API logic I just gave you).
+  // NO @unique here!
   jikanId   Int?     
   tvmazeId  Int?     
   
   title     String
   image     String
-  
   status    AnimeStatus @default(WANT_TO_WATCH) 
-  
   updatedAt DateTime @updatedAt
-
-  // OPTIONAL: If you want strict database enforcement, you can use a
-  // compound unique constraint, but for this project, removing @unique 
-  // and relying on the API check is simpler and 100% effective.
 }
