@@ -1,10 +1,14 @@
+// routes/api.js - CLEANED (No double paths)
+
 const express = require('express');
 const router = express.Router();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 // 1. GET: Fetch the user's list
-router.get('/anime/mylist', async (req, res) => {
+// OLD: router.get('/anime/mylist') -> URL was /api/anime/anime/mylist (WRONG)
+// NEW: router.get('/mylist')       -> URL is /api/anime/mylist (CORRECT)
+router.get('/mylist', async (req, res) => {
     try {
         const list = await prisma.singleAnimeList.findMany();
         res.json(list);
@@ -14,8 +18,10 @@ router.get('/anime/mylist', async (req, res) => {
     }
 });
 
-// 2. POST: Save or Update an item (The Fix for "Unique Constraint" Error)
-router.post('/anime', async (req, res) => {
+// 2. POST: Save or Update an item
+// OLD: router.post('/anime') -> URL was /api/anime/anime (WRONG)
+// NEW: router.post('/')      -> URL is /api/anime (CORRECT)
+router.post('/', async (req, res) => {
     try {
         const { jikanId, tvmazeId, title, image, status } = req.body;
 
@@ -53,8 +59,10 @@ router.post('/anime', async (req, res) => {
     }
 });
 
-// 3. PUT: Update Status (Watching/Completed/etc)
-router.put('/anime/:id', async (req, res) => {
+// 3. PUT: Update Status
+// OLD: router.put('/anime/:id') -> URL was /api/anime/anime/123 (WRONG)
+// NEW: router.put('/:id')       -> URL is /api/anime/123 (CORRECT)
+router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
@@ -69,8 +77,10 @@ router.put('/anime/:id', async (req, res) => {
     }
 });
 
-// 4. DELETE: Remove item from list
-router.delete('/anime/:id', async (req, res) => {
+// 4. DELETE: Remove item
+// OLD: router.delete('/anime/:id') -> URL was /api/anime/anime/123 (WRONG)
+// NEW: router.delete('/:id')       -> URL is /api/anime/123 (CORRECT)
+router.delete('/:id', async (req, res) => {
     const { id } = req.params;
 
     try {
